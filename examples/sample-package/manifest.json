@@ -1,0 +1,19 @@
+{
+  "formatVersion": "1.0.0",
+  "strapiVersion": "5.28.0",
+  "strapiMajorVersion": 5,
+  "strapiMinorVersion": 28,
+  "exportedAt": "2026-10-05T16:00:00.000Z",
+  "sourceEnvironment": "example",
+  "locales": ["en"],
+  "contentTypes": ["api::website-page.website-page"],
+  "components": ["shared.seo", "sections.hero", "sections.value-section", "sections.block-a", "sections.block-b"],
+  "mediaCount": 1,
+  "relationCount": 1,
+  "entryCount": 1,
+  "componentCount": 3,
+  "dynamicZoneCount": 3,
+  "includeMedia": false,
+  "includeRelations": true,
+  "plugin": "deep-import-export"
+}

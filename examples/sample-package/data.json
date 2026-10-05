@@ -1,0 +1,65 @@
+{
+  "documents": [
+    {
+      "uid": "api::website-page.website-page",
+      "kind": "collectionType",
+      "documentId": "example-page",
+      "identity": { "slug": "about-us" },
+      "locales": [
+        {
+          "locale": "en",
+          "publicationState": "published",
+          "draft": {
+            "data": {
+              "title": "About Us",
+              "slug": "about-us",
+              "seo": {
+                "metaTitle": "About",
+                "metaDescription": "Company",
+                "structuredData": { "@type": "WebPage" }
+              },
+              "sections": [
+                {
+                  "__component": "sections.hero",
+                  "title": "Welcome",
+                  "image": {
+                    "$media": {
+                      "key": "media/0001-hero.png",
+                      "name": "hero.png",
+                      "mime": "image/png",
+                      "hash": "example-hash"
+                    }
+                  }
+                },
+                {
+                  "__component": "sections.value-section",
+                  "title": "Values",
+                  "blocks": [
+                    { "__component": "sections.block-a", "title": "First" },
+                    { "__component": "sections.block-b", "text": "Second", "count": 2 }
+                  ]
+                }
+              ],
+              "relatedArticles": [
+                {
+                  "$ref": {
+                    "uid": "api::article.article",
+                    "documentId": "example-article",
+                    "locale": "en",
+                    "identity": { "slug": "story" }
+                  }
+                }
+              ]
+            }
+          },
+          "published": {
+            "data": {
+              "title": "About Us",
+              "slug": "about-us"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+import bootstrap from "./bootstrap"
+import config from "./config"
+import contentTypes from "./content-types"
+import controllers from "./controllers"
+import destroy from "./destroy"
+import policies from "./policies"
+import register from "./register"
+import routes from "./routes"
+import services from "./services"
+
+const plugin = () => ({
+  register,
+  bootstrap,
+  destroy,
+  config,
+  controllers,
+  routes,
+  services,
+  policies,
+  contentTypes,
+})
+
+export default plugin

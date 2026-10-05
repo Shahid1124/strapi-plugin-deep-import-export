@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "deep_import_export_jobs",
+  "info": {
+    "singularName": "job",
+    "pluralName": "jobs",
+    "displayName": "Import Export Job"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "operation": {
+      "type": "enumeration",
+      "enum": ["export", "import"],
+      "required": true
+    },
+    "state": {
+      "type": "enumeration",
+      "enum": ["queued", "running", "completed", "failed"],
+      "required": true,
+      "default": "queued"
+    },
+    "startedAt": { "type": "datetime" },
+    "finishedAt": { "type": "datetime" },
+    "summary": { "type": "json" },
+    "progress": { "type": "json" },
+    "errors": { "type": "json" },
+    "warnings": { "type": "json" },
+    "options": { "type": "json" },
+    "archivePath": { "type": "string" },
+    "rollback": { "type": "json" }
+  }
+}

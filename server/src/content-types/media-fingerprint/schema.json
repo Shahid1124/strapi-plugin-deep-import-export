@@ -1,0 +1,23 @@
+{
+  "kind": "collectionType",
+  "collectionName": "deep_import_export_media_fingerprints",
+  "info": {
+    "singularName": "media-fingerprint",
+    "pluralName": "media-fingerprints",
+    "displayName": "Media Fingerprint"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "sha256": { "type": "string", "required": true, "unique": true },
+    "fileId": { "type": "integer", "required": true },
+    "name": { "type": "string" },
+    "mime": { "type": "string" },
+    "size": { "type": "biginteger" }
+  }
+}

@@ -2,6 +2,10 @@
   "name": "strapi-plugin-deep-import-export",
   "version": "0.1.0",
   "description": "Schema-driven deep import and export for Strapi 5 content, components, dynamic zones, relations, and media.",
+  "author": {
+    "name": "Shahid",
+    "url": "https://github.com/Shahid1124"
+  },
   "keywords": [
     "strapi",
     "strapi-plugin",

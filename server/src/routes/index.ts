@@ -21,6 +21,8 @@ const routes = {
       { method: "POST", path: "/import/validate", handler: "transfer.validate", config: auth("import") },
       { method: "POST", path: "/import", handler: "transfer.importStart", config: auth("import") },
       { method: "GET", path: "/history", handler: "transfer.history", config: auth("read") },
+      { method: "DELETE", path: "/history", handler: "transfer.clearHistory", config: auth("read") },
+      { method: "DELETE", path: "/jobs/:id", handler: "transfer.remove", config: auth("read") },
       { method: "GET", path: "/status/:id", handler: "transfer.status", config: auth("read") },
       { method: "GET", path: "/jobs/:id/download", handler: "transfer.download", config: auth("export") },
     ],

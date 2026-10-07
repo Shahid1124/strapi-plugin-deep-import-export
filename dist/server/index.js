@@ -866,8 +866,8 @@ var readUploadBytes = async (strapi, file) => {
   throw new Error(`Media ${String(file.name ?? file.id)} has no readable URL.`);
 };
 var rmQuiet = async (filePath) => {
-  const { rm: rm3 } = await import("node:fs/promises");
-  await rm3(filePath, { force: true });
+  const { rm: rm4 } = await import("node:fs/promises");
+  await rm4(filePath, { force: true });
 };
 
 // server/src/bootstrap.ts
@@ -2781,6 +2781,27 @@ var emptyProgress = () => ({
   media: { done: 0, total: 0 },
   relations: { done: 0, total: 0 }
 });
+var removeJobFiles = async (strapi, job) => {
+  const root = import_node_path5.default.resolve(storageRoot(strapi));
+  const documentId = String(job.documentId ?? "");
+  const targets = [
+    import_node_path5.default.join(root, "exports", documentId),
+    import_node_path5.default.join(root, "imports", documentId)
+  ];
+  if (typeof job.archivePath === "string") {
+    const archive = import_node_path5.default.resolve(job.archivePath);
+    if (archive.startsWith(`${root}${import_node_path5.default.sep}`)) {
+      targets.push(archive, import_node_path5.default.dirname(archive));
+    }
+  }
+  for (const target of targets) {
+    const resolved = import_node_path5.default.resolve(target);
+    if (resolved === root || !resolved.startsWith(`${root}${import_node_path5.default.sep}`)) {
+      continue;
+    }
+    await (0, import_promises7.rm)(resolved, { recursive: true, force: true });
+  }
+};
 var assertSafeId = (value) => {
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(value)) {
     throw new ImportExportError("The job id is not valid.", "INVALID_ID");
@@ -2869,6 +2890,41 @@ var createTransferService = (strapi) => {
         throw new ImportExportError("Job not found.", "NOT_FOUND");
       }
       return toPublic(job);
+    },
+    async deleteJob(documentId) {
+      const id = assertSafeId(documentId);
+      const job = await jobs().findOne({ documentId: id });
+      if (!job) {
+        throw new ImportExportError("Job not found.", "NOT_FOUND");
+      }
+      if (job.state === "queued" || job.state === "running") {
+        throw new ImportExportError("A job that is still running cannot be deleted.", "JOB_RUNNING");
+      }
+      await removeJobFiles(strapi, job);
+      await jobs().delete({ documentId: id });
+      progressByJob.delete(id);
+      return { deleted: 1 };
+    },
+    async clearHistory() {
+      let deleted = 0;
+      for (; ; ) {
+        const result = await jobs().findMany({
+          filters: { state: { $in: ["completed", "failed"] } },
+          pagination: { page: 1, pageSize: 50 }
+        });
+        const rows = Array.isArray(result) ? result : [];
+        if (rows.length === 0) {
+          break;
+        }
+        for (const row of rows) {
+          const record = row;
+          await removeJobFiles(strapi, record);
+          await jobs().delete({ documentId: String(record.documentId) });
+          progressByJob.delete(String(record.documentId));
+          deleted += 1;
+        }
+      }
+      return { deleted };
     },
     async download(documentId) {
       const job = await jobs().findOne({ documentId: assertSafeId(documentId) });
@@ -3213,6 +3269,20 @@ var transfer_default = ({ strapi }) => ({
       fail(ctx, error);
     }
   },
+  async remove(ctx) {
+    try {
+      ctx.body = { data: await serviceOf(strapi).deleteJob(String(ctx.params.id)) };
+    } catch (error) {
+      fail(ctx, error);
+    }
+  },
+  async clearHistory(ctx) {
+    try {
+      ctx.body = { data: await serviceOf(strapi).clearHistory() };
+    } catch (error) {
+      fail(ctx, error);
+    }
+  },
   async history(ctx) {
     try {
       const urlQuery = ctx.query ?? {};
@@ -3291,6 +3361,8 @@ var routes = {
       { method: "POST", path: "/import/validate", handler: "transfer.validate", config: auth("import") },
       { method: "POST", path: "/import", handler: "transfer.importStart", config: auth("import") },
       { method: "GET", path: "/history", handler: "transfer.history", config: auth("read") },
+      { method: "DELETE", path: "/history", handler: "transfer.clearHistory", config: auth("read") },
+      { method: "DELETE", path: "/jobs/:id", handler: "transfer.remove", config: auth("read") },
       { method: "GET", path: "/status/:id", handler: "transfer.status", config: auth("read") },
       { method: "GET", path: "/jobs/:id/download", handler: "transfer.download", config: auth("export") }
     ]

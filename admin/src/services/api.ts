@@ -3,6 +3,7 @@ import { PLUGIN_ID } from "../pluginId"
 interface FetchClient {
   get: (url: string, options?: { params?: Record<string, unknown> }) => Promise<{ data: { data: unknown } }>
   post: (url: string, body?: unknown) => Promise<{ data: { data: unknown } }>
+  del: (url: string) => Promise<{ data: { data: unknown } }>
 }
 
 const base = `/${PLUGIN_ID}`
@@ -20,6 +21,8 @@ export const api = (client: FetchClient) => ({
   startImport: async (token: string, options: ImportRequest) =>
     (await client.post(`${base}/import`, { token, options })).data.data as Job,
   history: async () => (await client.get(`${base}/history`)).data.data as Job[],
+  deleteJob: async (id: string) => (await client.del(`${base}/jobs/${id}`)).data.data as { deleted: number },
+  clearHistory: async () => (await client.del(`${base}/history`)).data.data as { deleted: number },
   status: async (id: string) => (await client.get(`${base}/status/${id}`)).data.data as Job,
 })
 

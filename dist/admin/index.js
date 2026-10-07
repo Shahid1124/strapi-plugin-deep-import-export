@@ -142,6 +142,8 @@ var init_api = __esm({
       },
       startImport: async (token, options) => (await client.post(`${base}/import`, { token, options })).data.data,
       history: async () => (await client.get(`${base}/history`)).data.data,
+      deleteJob: async (id) => (await client.del(`${base}/jobs/${id}`)).data.data,
+      clearHistory: async () => (await client.del(`${base}/history`)).data.data,
       status: async (id) => (await client.get(`${base}/status/${id}`)).data.data
     });
     downloadArchive = async (jobId, filename) => {
@@ -482,16 +484,44 @@ var init_HistoryPage = __esm({
       const load = React3.useCallback(() => {
         api(client).history().then(setJobs).catch((cause) => setError(cause.message));
       }, [client]);
+      const remove = async (job) => {
+        if (!window.confirm(`Delete this ${job.operation} record and its file from disk?`)) {
+          return;
+        }
+        setError("");
+        try {
+          await api(client).deleteJob(job.documentId);
+          load();
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "Could not delete this history record.");
+        }
+      };
+      const clearFinished = async () => {
+        if (!window.confirm("Delete every finished import and export, including the files stored on disk?")) {
+          return;
+        }
+        setError("");
+        try {
+          await api(client).clearHistory();
+          load();
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : "Could not clear history.");
+        }
+      };
       React3.useEffect(() => {
         load();
       }, [load]);
+      const finished = jobs.some((job) => job.state !== "queued" && job.state !== "running");
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Flex, { direction: "column", alignItems: "stretch", gap: 4, children: [
         /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Flex, { justifyContent: "space-between", alignItems: "center", gap: 4, wrap: "wrap", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "omega", textColor: "neutral600", children: "Past exports and imports. The log stores counts and errors, not file contents or secrets." }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { variant: "tertiary", onClick: load, children: "Refresh" })
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Box, { grow: 1, basis: "16rem", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "omega", textColor: "neutral600", children: "Deleting a finished job removes the log and its file from disk." }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Flex, { gap: 2, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { variant: "tertiary", onClick: load, children: "Refresh" }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { variant: "danger-light", disabled: !finished, onClick: () => void clearFinished(), children: "Clear finished" })
+          ] })
         ] }),
         error ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { textColor: "danger600", children: error }) : null,
-        jobs.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.EmptyStateLayout, { content: "No import or export jobs yet.", action: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { onClick: load, children: "Refresh" }) }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Box, { background: "neutral0", hasRadius: true, shadow: "filterShadow", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Table, { colCount: 8, rowCount: jobs.length, children: [
+        jobs.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.EmptyStateLayout, { content: "No import or export jobs yet.", action: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { onClick: load, children: "Refresh" }) }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Box, { background: "neutral0", hasRadius: true, shadow: "filterShadow", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Table, { colCount: 9, rowCount: jobs.length, children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Thead, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Tr, { children: [
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Operation" }) }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Started" }) }),
@@ -500,21 +530,26 @@ var init_HistoryPage = __esm({
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Updated" }) }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Skipped" }) }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Failed" }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Duration" }) })
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Duration" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Th, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Flex, { justifyContent: "flex-end", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { variant: "sigma", children: "Actions" }) }) })
           ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Tbody, { children: jobs.map((job) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Tr, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: job.operation }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: job.startedAt ? new Date(job.startedAt).toLocaleString() : "\u2014" }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Status, { variant: statusVariant(job.state), size: "S", children: job.state }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "created") }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "updated") }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "skipped") }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "failed") }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Flex, { gap: 2, alignItems: "center", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: duration(job) }),
-              job.downloadable ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { variant: "tertiary", onClick: () => void downloadArchive(job.documentId, job.filename || "export.zip"), children: "Download" }) : null
-            ] }) })
-          ] }, job.documentId)) })
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Tbody, { children: jobs.map((job) => {
+            const locked = job.state === "queued" || job.state === "running";
+            return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Tr, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: job.operation }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: job.startedAt ? new Date(job.startedAt).toLocaleString() : "\u2014" }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Status, { variant: statusVariant(job.state), size: "S", children: job.state }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "created") }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "updated") }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "skipped") }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: count(job, "failed") }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { children: duration(job) }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Td, { children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_design_system5.Flex, { gap: 2, justifyContent: "flex-end", children: [
+                job.downloadable ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { size: "S", variant: "tertiary", onClick: () => void downloadArchive(job.documentId, job.filename || "export.zip"), children: "Download" }) : null,
+                locked ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Typography, { textColor: "neutral600", children: "\u2014" }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_design_system5.Button, { size: "S", variant: "danger-light", onClick: () => void remove(job), children: "Delete" })
+              ] }) })
+            ] }, job.documentId);
+          }) })
         ] }) })
       ] });
     };

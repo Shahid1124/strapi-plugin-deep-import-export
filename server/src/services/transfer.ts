@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { createReadStream } from "node:fs"
-import { mkdir, copyFile, open, stat } from "node:fs/promises"
+import { mkdir, copyFile, open, rm, stat } from "node:fs/promises"
 import path from "node:path"
 import { PLUGIN_ID } from "./utils/constants"
 import { ImportExportError, type StructuredIssue } from "./utils/errors"
@@ -62,6 +62,28 @@ const emptyProgress = () => ({
   media: { done: 0, total: 0 },
   relations: { done: 0, total: 0 },
 })
+
+const removeJobFiles = async (strapi: AppStrapi, job: Record<string, unknown>) => {
+  const root = path.resolve(storageRoot(strapi))
+  const documentId = String(job.documentId ?? "")
+  const targets = [
+    path.join(root, "exports", documentId),
+    path.join(root, "imports", documentId),
+  ]
+  if (typeof job.archivePath === "string") {
+    const archive = path.resolve(job.archivePath)
+    if (archive.startsWith(`${root}${path.sep}`)) {
+      targets.push(archive, path.dirname(archive))
+    }
+  }
+  for (const target of targets) {
+    const resolved = path.resolve(target)
+    if (resolved === root || !resolved.startsWith(`${root}${path.sep}`)) {
+      continue
+    }
+    await rm(resolved, { recursive: true, force: true })
+  }
+}
 
 const assertSafeId = (value: string): string => {
   if (!/^[A-Za-z0-9_-]{6,64}$/.test(value)) {
@@ -159,6 +181,43 @@ export const createTransferService = (strapi: AppStrapi) => {
         throw new ImportExportError("Job not found.", "NOT_FOUND")
       }
       return toPublic(job)
+    },
+
+    async deleteJob(documentId: string) {
+      const id = assertSafeId(documentId)
+      const job = await jobs().findOne({ documentId: id })
+      if (!job) {
+        throw new ImportExportError("Job not found.", "NOT_FOUND")
+      }
+      if (job.state === "queued" || job.state === "running") {
+        throw new ImportExportError("A job that is still running cannot be deleted.", "JOB_RUNNING")
+      }
+      await removeJobFiles(strapi, job)
+      await jobs().delete({ documentId: id })
+      progressByJob.delete(id)
+      return { deleted: 1 }
+    },
+
+    async clearHistory() {
+      let deleted = 0
+      for (;;) {
+        const result = await jobs().findMany({
+          filters: { state: { $in: ["completed", "failed"] } },
+          pagination: { page: 1, pageSize: 50 },
+        })
+        const rows = Array.isArray(result) ? result : []
+        if (rows.length === 0) {
+          break
+        }
+        for (const row of rows) {
+          const record = row as Record<string, unknown>
+          await removeJobFiles(strapi, record)
+          await jobs().delete({ documentId: String(record.documentId) })
+          progressByJob.delete(String(record.documentId))
+          deleted += 1
+        }
+      }
+      return { deleted }
     },
 
     async download(documentId: string) {

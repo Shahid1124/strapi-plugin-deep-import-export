@@ -128,6 +128,20 @@ export default ({ strapi }: { strapi: AppStrapi }) => ({
       fail(ctx, error)
     }
   },
+  async remove(ctx: Context) {
+    try {
+      ctx.body = { data: await serviceOf(strapi).deleteJob(String(ctx.params.id)) }
+    } catch (error) {
+      fail(ctx, error)
+    }
+  },
+  async clearHistory(ctx: Context) {
+    try {
+      ctx.body = { data: await serviceOf(strapi).clearHistory() }
+    } catch (error) {
+      fail(ctx, error)
+    }
+  },
   async history(ctx: Context) {
     try {
       const urlQuery = (ctx as Context & { query?: Record<string, string> }).query ?? {}

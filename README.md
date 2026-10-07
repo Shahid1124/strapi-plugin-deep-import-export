@@ -1,26 +1,35 @@
 # Deep Import / Export
 
-Schema-driven import and export for this Strapi 5 project. The plugin reads content-type and component schemas at runtime. It does not contain special cases for Website Page, Homepage, Hero, or any other project content type.
+Schema-driven import and export for Strapi 5. The plugin reads content-type and component schemas at runtime, so it works in any Strapi 5 project that already has those schemas. It does not create content types, and it does not special-case any one project's structure.
 
 It uses the Document Service API, not GraphQL. Existing GraphQL queries keep working because the plugin does not change their schemas or resolvers.
 
+## Requirements
+
+- Strapi 5
+- Node.js 18 or newer
+
 ## Installation
 
-Strapi's Marketplace only lists plugins that are published on npm. Until then, install this package from the command line. A local folder and a GitHub repository both work.
-
-From a folder on disk:
-
 ```bash
-yarn add file:../strapi-plugin-deep-import-export
+npm install strapi-plugin-deep-import-export
 ```
 
-From GitHub:
-
 ```bash
-yarn add github:Shahid1124/strapi-plugin-deep-import-export
+yarn add strapi-plugin-deep-import-export
 ```
 
-Enable it in `config/plugins.ts`. Leave out `resolve`. Strapi loads `strapi-plugin-deep-import-export` from `node_modules` because the package name follows the `strapi-plugin-` convention.
+Enable the plugin in `config/plugins.ts`. In a JavaScript project, add the same key to `config/plugins.js`. Leave out `resolve`. Strapi loads `strapi-plugin-deep-import-export` from `node_modules`.
+
+```ts
+export default () => ({
+  "deep-import-export": {
+    enabled: true,
+  },
+})
+```
+
+Optional settings:
 
 ```ts
 "deep-import-export": {
@@ -35,7 +44,7 @@ Enable it in `config/plugins.ts`. Leave out `resolve`. Strapi loads `strapi-plug
 }
 ```
 
-Restart Strapi. The first boot creates two hidden content types, `job` and `media-fingerprint`. They do not appear in the Content Manager.
+Restart Strapi. For a production admin build, run `npm run build` or `yarn build` in the Strapi project so the admin panel includes the plugin. The first boot creates two hidden content types, `job` and `media-fingerprint`. They do not appear in the Content Manager.
 
 Grant **Access Import / Export**, **Export content**, and **Import content** under Settings → Roles → Plugins. Super Admin already has every permission.
 
@@ -282,7 +291,7 @@ The job reports **Rollback: Completed** only when every compensating action succ
 
 ## History and progress
 
-Jobs are stored in the hidden `job` content type. The admin polls `GET /deep-import-export/status/:id` and shows progress for content types, entries, components, media, and relations. History shows operation, status, counts, and duration. Archive paths and file bytes are not returned in the history payload.
+Jobs are stored in the hidden `job` content type. The admin polls `GET /deep-import-export/status/:id` and shows progress for content types, entries, components, media, and relations. History shows operation, status, counts, and duration. Delete removes one finished job and its archive from disk. Clear finished removes every completed or failed job and those files. A job that is still queued or running cannot be deleted. Archive paths and file bytes are not returned in the history payload.
 
 ## Security
 
@@ -307,15 +316,17 @@ All routes are admin routes mounted at `/deep-import-export`.
 | POST | `/import/validate` | import |
 | POST | `/import` | import |
 | GET | `/history` | read |
+| DELETE | `/history` | read |
+| DELETE | `/jobs/:id` | read |
 | GET | `/status/:id` | read |
 | GET | `/jobs/:id/download` | export |
 
 ## Tests
 
-From `packages/cms`:
+From this repository:
 
 ```bash
-yarn test:import-export
+npm test
 ```
 
 The tests cover scalars, nested components, dynamic zone order, nested dynamic zones, relations, circular relations, media, draft/publish planning, locale separation, schema errors, version rejection, identity matching, conflict strategies, media reuse, and rollback when a relation cannot be resolved. They use an in-memory schema shaped like a page with SEO, a hero, repeatable features, tabs, an explore relation, and a value section that contains another dynamic zone. Those names exist only in the test fixture.

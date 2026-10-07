@@ -81,7 +81,7 @@ export const strategyFor = (
     return { action: "create" }
   }
   const chosen = strategy === "ask" ? decision : strategy
-  if (!chosen || chosen === "ask") {
+  if (!chosen) {
     return { action: "skip", error: "Choose skip, update, or create for this existing document before importing." }
   }
   return { action: chosen }

@@ -1,8 +1,24 @@
 import { createReadStream, createWriteStream } from "node:fs"
 import { stat } from "node:fs/promises"
-import { crc32, inflateRaw } from "node:zlib"
+import { inflateRawSync } from "node:zlib"
 import { pipeline } from "node:stream/promises"
 import { ImportExportError } from "../utils/errors"
+
+const CRC_TABLE = new Uint32Array(256).map((_, index) => {
+  let crc = index
+  for (let bit = 0; bit < 8; bit += 1) {
+    crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1
+  }
+  return crc >>> 0
+})
+
+const crc32 = (data: Buffer, seed = 0): number => {
+  let crc = seed ^ 0xffffffff
+  for (let index = 0; index < data.length; index += 1) {
+    crc = CRC_TABLE[(crc ^ data[index]) & 0xff] ^ (crc >>> 8)
+  }
+  return (crc ^ 0xffffffff) >>> 0
+}
 
 export interface ZipEntry {
   name: string
@@ -239,7 +255,7 @@ export const readZip = async (filePath: string, maxBytes: number): Promise<ZipEn
       if (uncompressedSize > maxBytes) {
         throw new ImportExportError("Archive entry expands beyond the size limit.", "ZIP_BOMB", { name })
       }
-      data = inflateRaw(slice)
+      data = inflateRawSync(slice)
     } else {
       throw new ImportExportError(`Unsupported ZIP compression method ${method}.`, "UNSUPPORTED_ZIP", { name, method })
     }

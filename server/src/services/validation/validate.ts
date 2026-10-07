@@ -342,7 +342,7 @@ export const validatePackage = (
         )
         return
       }
-      walkData(version, model, entry.uid, destination, issues, stats, publishing)
+      walkData(version, model, document.uid, destination, issues, stats, publishing)
     })
     parsed.push(document)
   })

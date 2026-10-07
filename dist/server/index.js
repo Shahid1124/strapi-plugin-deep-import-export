@@ -1140,6 +1140,20 @@ var import_node_fs2 = require("node:fs");
 var import_promises3 = require("node:fs/promises");
 var import_node_zlib = require("node:zlib");
 var import_promises4 = require("node:stream/promises");
+var CRC_TABLE = new Uint32Array(256).map((_, index) => {
+  let crc = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    crc = crc & 1 ? 3988292384 ^ crc >>> 1 : crc >>> 1;
+  }
+  return crc >>> 0;
+});
+var crc32 = (data, seed = 0) => {
+  let crc = seed ^ 4294967295;
+  for (let index = 0; index < data.length; index += 1) {
+    crc = CRC_TABLE[(crc ^ data[index]) & 255] ^ crc >>> 8;
+  }
+  return (crc ^ 4294967295) >>> 0;
+};
 var LOCAL_SIGNATURE = 67324752;
 var CENTRAL_SIGNATURE = 33639248;
 var END_SIGNATURE = 101010256;
@@ -1159,7 +1173,7 @@ var ZipWriter = class {
   }
   async addBuffer(name, data) {
     this.assertName(name);
-    const checksum = (0, import_node_zlib.crc32)(data);
+    const checksum = crc32(data);
     await this.writeLocal(name, checksum, data.length, data);
   }
   async addFile(name, filePath) {
@@ -1169,7 +1183,7 @@ var ZipWriter = class {
     await new Promise((resolve, reject) => {
       const reader = (0, import_node_fs2.createReadStream)(filePath);
       reader.on("data", (chunk) => {
-        checksum = (0, import_node_zlib.crc32)(chunk, checksum);
+        checksum = crc32(chunk, checksum);
       });
       reader.on("error", reject);
       reader.on("end", () => resolve());
@@ -1342,7 +1356,7 @@ var readZip = async (filePath, maxBytes) => {
       if (uncompressedSize > maxBytes) {
         throw new ImportExportError("Archive entry expands beyond the size limit.", "ZIP_BOMB", { name });
       }
-      data = (0, import_node_zlib.inflateRaw)(slice);
+      data = (0, import_node_zlib.inflateRawSync)(slice);
     } else {
       throw new ImportExportError(`Unsupported ZIP compression method ${method}.`, "UNSUPPORTED_ZIP", { name, method });
     }
@@ -1768,7 +1782,7 @@ var strategyFor = (strategy, hasMatch, decision, kind) => {
     return { action: "create" };
   }
   const chosen = strategy === "ask" ? decision : strategy;
-  if (!chosen || chosen === "ask") {
+  if (!chosen) {
     return { action: "skip", error: "Choose skip, update, or create for this existing document before importing." };
   }
   return { action: chosen };
@@ -2610,7 +2624,7 @@ var validatePackage = (manifest, documents, schemas, destination, publishing) =>
         );
         return;
       }
-      walkData(version, model, entry.uid, destination, issues, stats, publishing);
+      walkData(version, model, document.uid, destination, issues, stats, publishing);
     });
     parsed.push(document);
   });
